@@ -1,0 +1,148 @@
+
+
+import time
+from typing import Optional
+from fastapi import FastAPI, HTTPException,Response,status
+from fastapi.params import Body
+from pydantic import BaseModel
+from random import randrange
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
+app=FastAPI()
+
+class Post(BaseModel):
+    title:str
+    content:str
+    published:bool=True
+    rating:Optional[int]=None
+
+while True:
+    try:
+        conn=psycopg2.connect(host='localhost',database='fastapi',user='postgres',
+                            password='Sreeshma123#',cursor_factory=RealDictCursor)
+        cursor=conn.cursor()
+        print("DATABASE CONNECTION SUCCESSFULL")
+        break
+    except Exception as err:
+        print("SORRY !! CONNECTION FAILED")
+        print("ERROR : ",err)
+        time.sleep(0.1)
+
+
+my_posts=[{'id':1,'title':"Mr.bean",'content':"New cartoon",'published': True, 'rating': None}]#hardcode ..else data lost after each reload
+
+def find_post(id):
+    for i in my_posts:
+        if i['id'] == id:
+           return i
+        
+def find_index(id):
+    for i,p in enumerate(my_posts):
+        if p['id']==id:
+            return i
+
+
+
+@app.get('/')
+async def root():
+    return{"message":"Good Evening","status":True} # autmatically covert it into json
+
+@app.get('/post')
+def getpost():
+    cursor.execute(""" SELECT * FROM posts""")
+    post=cursor.fetchall()
+    return {"post":post}
+
+
+@app.post('/createpost',status_code=status.HTTP_201_CREATED)
+def addpost(req:Post):
+    cursor.execute("""INSERT INTO posts(title,content,published) VALUES(%s,%s,%s) RETURNING * """,(req.title,req.content,req.published))
+    data=cursor.fetchone()
+    conn.commit()
+    return{"message":"Post created successfully",
+           "new_post":data
+           }
+
+
+@app.get('/post/{id}')
+def get_One_post(id:int):
+    cursor.execute("""SELECT * FROM posts WHERE id=%s""",(str(id)))
+    p=cursor.fetchone()
+    if not p:
+        raise HTTPException(status_code=404,detail=f"Sorry !! post with id:{id} is not found")
+    return {"requested post":p}
+
+
+@app.get('/post/latest/')
+def get_latest():
+    print(len(my_posts))
+    latest=my_posts[len(my_posts)-1]
+    return{"latest":latest}
+
+
+@app.delete('/post/{id}',status_code=status.HTTP_204_NO_CONTENT)
+def delete_post(id:int):
+    cursor.execute("""DELETE FROM posts WHERE id=%s RETURNING * """,(str(id)))
+    data=cursor.fetchone()
+    if not data:
+        raise HTTPException(status_code=404,detail=f"Post with this id :{id} already deleted")
+    conn.commit()
+    return Response(status_code=status.HTTP_201_CREATED)
+
+
+
+
+@app.put('/post/{id}')
+def update(id:int,post:Post):
+    cursor.execute("""UPDATE posts SET title=%s,content=%s,published=%s WHERE id=%s RETURNING *""",
+                   (post.title,post.content,post.published,str(id)))
+    postdata=cursor.fetchone()
+    
+    if postdata==None:
+        raise HTTPException(status_code=404,detail=f"Sorry cant update, Post doesnt exist")
+    conn.commit()
+    return {"Message":"updated",
+            "Data":postdata}
+   
+
+
+?MAIN
+
+
+   
+import time
+from typing import List, Optional
+from fastapi import Depends, FastAPI, HTTPException,Response,status
+from fastapi.params import Body
+from pydantic import BaseModel
+from random import randrange
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from . import model,schemas,utills
+from .database import SessionLocal, engine,get_db
+from sqlalchemy.orm import Session
+from .routes import post,user
+
+model.Base.metadata.create_all(bind=engine)
+
+
+app=FastAPI()
+    
+
+
+while True:
+    try:
+        conn=psycopg2.connect(host='localhost',database='fastapi',user='postgres',
+                            password='Sreeshma123#',cursor_factory=RealDictCursor)
+        cursor=conn.cursor()
+        print("DATABASE CONNECTION SUCCESSFULL")
+        break
+    except Exception as err:
+        print("SORRY !! CONNECTION FAILED")
+        print("ERROR : ",err)
+        time.sleep(0.1)
+
+
+app.include_router(post.router)
+app.include_router(user.router)

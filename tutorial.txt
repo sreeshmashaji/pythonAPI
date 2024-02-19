@@ -1,0 +1,97 @@
+@app.get('/')
+def simple():
+    return "hello world"  
+# There are many other objects and models that will be automatically converted to JSON (including ORMs, etc).
+
+
+@app.get('/item/{id}')
+def items():
+    return {"ID IS":"name"}
+
+@app.get('/item/{id}')
+def items(id:str):
+    return {"ID IS":id}
+
+
+    
+class ModelName(str, Enum):
+    alexnet = "alexnet"
+    resnet = "resnet"
+    lenet = "lenet"
+
+
+
+# enum will help you to define api with predifined parameter
+    # here we can only give alexnet resnet and lenet as modelname
+
+@app.get("/models/{model_name}")
+async def get_model(model_name: ModelName):
+    if model_name is ModelName.alexnet:
+        return {"model_name": model_name, "message": "Deep Learning FTW!"}
+
+    if model_name.value == "lenet":
+        return {"model_name": model_name, "message": "LeCNN all the images"}
+
+    return {"model_name": model_name, "message": "Have some residuals"}
+
+
+# Ifb2 api have same path the first one will work
+
+
+fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
+
+
+@app.get("/items/")
+async def read_item(skip: int = 0, limit: int = 20):
+    return fake_items_db[skip : skip + limit]
+
+
+
+
+
+@app.get("/items/{item_id}")
+async def read_item(item_id: str, q: str | None = None,short=bool):
+    if q:
+        return {"item_id": item_id, "q": q,'short':short}
+    return {"item_id": item_id}
+
+# calling method 127.0.0.1:8000/items/9?q=helloo
+
+# 127.0.0.1:8000/items/9?q=helloo&short=on  here on is converted into bool
+
+
+@app.get("/users/{user_id}/items/{item_id}")
+async def read_user_item(
+    user_id: int, item_id: str, q: str | None = None, short: bool = False
+):
+    item = {"item_id": item_id, "owner_id": user_id}
+    if q:
+        item.update({"q": q})
+    if not short:
+        item.update(
+            {"description": "This is an amazing item that has a long description"}
+        )
+    return item
+
+# Here the query parameters are optional bcz we provide default values
+# if you want to make the query parameters are required dont provide the deflt values
+
+
+# for req body we need to first create a datamodel
+
+class Student(BaseModel):
+    name:str
+    age:int
+    subject:str
+    std:int=12 #null  std:int|None=None
+
+
+@app.post('/student/{name}')
+def student(name:str,req:Student,q:int|None=None):
+   
+    res= {"name is ":name,**req.dict()}
+    if q:
+        res.update({"q":q})
+
+
+
