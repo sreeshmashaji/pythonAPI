@@ -1,15 +1,15 @@
 from fastapi import  FastAPI
-from . import model
-from .database import  engine
 from .routes import post,user,auth,vote
-from .config import settings
 from fastapi.middleware.cors import CORSMiddleware
+# from . import model
+# from .database import  engine
+
 # model.Base.metadata.create_all(bind=engine)
 
 # print(settings.db_username)
 app=FastAPI()
 
-origin=['https://www.google.com','https://www.google.co.in']
+origin=['*']
 app.add_middleware(   #runs before every rqst
     CORSMiddleware,
     allow_origins=origin,
